@@ -7,9 +7,7 @@ frontend:
     build:
       commands:
         - mkdir -p .amplify-hosting
-        - cp -r . .amplify-hosting/ 2>/dev/null || true
-        - cp package*.json .amplify-hosting/ 2>/dev/null || true
-        - echo '{"version":1,"framework":"nodejs","routes":[{"path":"/mcp/*","target":"/mcp","type":"rewrite"},{"path":"/*","target":"/","type":"rewrite"}],"deployManifest":{"appRoot":".amplify-hosting","outputPathPrefix":"node_modules"},"compute":{"framework":"NODEJS","startCommand":"node index.js","runtime":"nodejs18"}}' > .amplify-hosting/deploy-manifest.json
+        - cp -r *.js package*.json node_modules deploy-manifest.json .amplify-hosting/
   artifacts:
     baseDirectory: .amplify-hosting
     files:
