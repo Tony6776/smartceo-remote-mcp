@@ -503,6 +503,9 @@ function createMCPServer() {
   return server;
 }
 
+// Store active SSE transport for handling POST messages
+let activeTransport = null;
+
 // SSE endpoint for Remote MCP (GET for SSE, POST returns error to force SSE fallback)
 app.get('/mcp/sse', async (req, res) => {
   console.log('📡 New MCP SSE connection from Claude');
@@ -514,9 +517,11 @@ app.get('/mcp/sse', async (req, res) => {
 
     // Create and start the SSE transport
     const transport = new SSEServerTransport('/mcp/messages', res);
+    activeTransport = transport; // Store for POST handler
 
     req.on('close', () => {
       console.log('🔌 SSE connection closed');
+      activeTransport = null; // Clear on disconnect
     });
 
     // Connect to MCP server
@@ -525,6 +530,7 @@ app.get('/mcp/sse', async (req, res) => {
 
   } catch (error) {
     console.error('❌ MCP connection error:', error);
+    activeTransport = null;
     if (!res.headersSent) {
       res.status(500).json({ error: 'MCP connection failed', message: error.message });
     }
@@ -542,9 +548,23 @@ app.post('/mcp/sse', (req, res) => {
 
 // POST endpoint for Remote MCP messages
 app.post('/mcp/messages', async (req, res) => {
-  console.log('📨 MCP message received:', req.body?.method);
-  // Messages are handled by SSE transport
-  res.status(202).send();
+  if (!activeTransport) {
+    console.log('📨 MCP message received but no active SSE session:', req.body?.method);
+    return res.status(503).json({
+      error: 'no_session',
+      message: 'No active SSE session. Connect to /mcp/sse first.'
+    });
+  }
+
+  try {
+    console.log('📨 Forwarding MCP message to transport:', req.body?.method);
+    await activeTransport.handlePostMessage(req, res);
+  } catch (error) {
+    console.error('❌ Error handling POST message:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Failed to process message', message: error.message });
+    }
+  }
 });
 
 // Health check
