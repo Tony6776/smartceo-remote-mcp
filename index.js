@@ -504,39 +504,30 @@ function createMCPServer() {
 }
 
 // SSE endpoint for Remote MCP
-app.get('/mcp/sse', (req, res) => {
+app.get('/mcp/sse', async (req, res) => {
   console.log('📡 New MCP SSE connection from Claude');
-
-  // Set SSE headers manually before creating transport
-  res.writeHead(200, {
-    'Content-Type': 'text/event-stream',
-    'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive',
-    'Access-Control-Allow-Origin': '*'
-  });
 
   try {
     if (!mcpServer) {
       mcpServer = createMCPServer();
     }
 
-    // Create transport with the response that already has headers set
+    // Create and start the SSE transport
     const transport = new SSEServerTransport('/mcp/messages', res);
 
     req.on('close', () => {
       console.log('🔌 SSE connection closed');
     });
 
-    // Connect asynchronously
-    mcpServer.connect(transport).then(() => {
-      console.log('✅ MCP Server connected');
-    }).catch((error) => {
-      console.error('❌ MCP connection error:', error);
-    });
+    // Connect to MCP server
+    await mcpServer.connect(transport);
+    console.log('✅ MCP Server connected via SSE');
+
   } catch (error) {
-    console.error('❌ MCP setup error:', error);
-    res.write(`event: error\ndata: ${JSON.stringify({ error: error.message })}\n\n`);
-    res.end();
+    console.error('❌ MCP connection error:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'MCP connection failed', message: error.message });
+    }
   }
 });
 
