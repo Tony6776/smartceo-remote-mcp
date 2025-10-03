@@ -1,16 +1,26 @@
 version: 1
-frontend:
+compute:
   phases:
     preBuild:
       commands:
         - npm ci
     build:
       commands:
-        - echo "Build completed"
+        - npm run build 2>/dev/null || echo "No build script, using source files"
   artifacts:
     baseDirectory: /
     files:
       - '**/*'
+      - node_modules/**/*
   cache:
     paths:
       - node_modules/**/*
+deploy:
+  phases:
+    preBuild:
+      commands:
+        - npm ci --production
+    postDeploy:
+      commands:
+        - echo "Deploy completed"
+startCommand: node index.js
