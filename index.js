@@ -548,23 +548,22 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Root endpoint
+// Root endpoint - MCP manifest for Claude.ai discovery
 app.get('/', (req, res) => {
   res.json({
-    name: 'SmartCEO Business System - Remote MCP Server',
-    version: '1.0.0',
-    mcp_endpoint: '/mcp/sse',
-    tools: [
-      'read_emails',
-      'sort_emails',
-      'get_calendar',
-      'business_snapshot',
-      'search_properties',
-      'send_email',
-      'trigger_workflow',
-      'query_database'
-    ],
-    status: 'operational'
+    protocol_version: "2024-11-05",
+    capabilities: {
+      tools: {},
+      resources: {},
+      prompts: {}
+    },
+    server_info: {
+      name: 'SmartCEO Business System',
+      version: '1.0.0'
+    },
+    instructions: "Use this server to access complete business system: read emails, manage calendar, query properties database, send emails, trigger workflows, and get business snapshots.",
+    transport: "sse",
+    sse_endpoint: "/mcp/sse"
   });
 });
 
