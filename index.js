@@ -507,13 +507,6 @@ function createMCPServer() {
 app.get('/mcp/sse', async (req, res) => {
   console.log('📡 New MCP SSE connection from Claude');
 
-  res.writeHead(200, {
-    'Content-Type': 'text/event-stream',
-    'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive',
-    'Access-Control-Allow-Origin': '*'
-  });
-
   if (!mcpServer) {
     mcpServer = createMCPServer();
   }
