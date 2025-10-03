@@ -21,7 +21,10 @@
     "imap": "^0.8.19",
     "mailparser": "^3.6.5",
     "node-ical": "^0.17.0",
-    "dotenv": "^16.3.1"
+    "dotenv": "^16.3.1",
+    "express-rate-limit": "^7.1.5",
+    "@sentry/node": "^7.99.0",
+    "twilio": "^4.20.0"
   },
   "engines": {
     "node": ">=18.0.0"

@@ -27,48 +27,85 @@ import Imap from 'imap';
 import { simpleParser } from 'mailparser';
 import ical from 'node-ical';
 import axios from 'axios';
+import rateLimit from 'express-rate-limit';
+import * as Sentry from '@sentry/node';
+import twilio from 'twilio';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
+// NEW: Sentry Error Monitoring (optional - only if SENTRY_DSN is set)
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV || 'production',
+    tracesSampleRate: 1.0,
+  });
+  app.use(Sentry.Handlers.requestHandler());
+  app.use(Sentry.Handlers.tracingHandler());
+}
+
+// NEW: Rate Limiting (protects against abuse)
+const limiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: process.env.RATE_LIMIT || 100, // 100 requests per minute default
+  message: 'Too many requests, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Middleware - EXISTING MIDDLEWARE PRESERVED
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
+app.use('/mcp/', limiter); // Apply rate limiting to MCP endpoints only
 
-// Configuration
-const SUPABASE_URL = 'https://wwciglseudmbifvmfxva.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind3Y2lnbHNldWRtYmlmdm1meHZhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MjYwNTc5OSwiZXhwIjoyMDY4MTgxNzk5fQ.Letj_MEjd6Bx5jhFYGDUWf2MxMQ3sPTHAJQqwu3dhLE';
-const CALENDAR_URL = 'https://calendar.google.com/calendar/ical/tadros.tony1976%40gmail.com/private-f99f8f6f09b218acdd3ebc135c7e5211/basic.ics';
-const N8N_API_URL = 'https://homelandersda.app.n8n.cloud/api/v1';
-const N8N_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjYzVlODc2Yy0yMTFiLTQ5MDUtYjVkZi0xYzcxMzIyNmVkYTgiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU4NDM1NjI2fQ.AlDcvX4qXDh3C4CtfLjKgorfFPoRJZKF_KcpGGOQ-1s';
+// Configuration - EXISTING VALUES PRESERVED, environment variables optional
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://wwciglseudmbifvmfxva.supabase.co';
+const SUPABASE_KEY = process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind3Y2lnbHNldWRtYmlmdm1meHZhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MjYwNTc5OSwiZXhwIjoyMDY4MTgxNzk5fQ.Letj_MEjd6Bx5jhFYGDUWf2MxMQ3sPTHAJQqwu3dhLE';
+const CALENDAR_URL = process.env.CALENDAR_URL || 'https://calendar.google.com/calendar/ical/tadros.tony1976%40gmail.com/private-f99f8f6f09b218acdd3ebc135c7e5211/basic.ics';
+const N8N_API_URL = process.env.N8N_API_URL || 'https://homelandersda.app.n8n.cloud/api/v1';
+const N8N_API_KEY = process.env.N8N_API_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjYzVlODc2Yy0yMTFiLTQ5MDUtYjVkZi0xYzcxMzIyNmVkYTgiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU4NDM1NjI2fQ.AlDcvX4qXDh3C4CtfLjKgorfFPoRJZKF_KcpGGOQ-1s';
 
-// Email configuration
+// Email configuration - EXISTING VALUES PRESERVED, environment variables optional
 const IMAP_CONFIG = {
-  user: 'tony@homelander.com.au',
-  password: 'Tonytadros$6776',
-  host: 'mail.homelander.com.au',
-  port: 993,
+  user: process.env.IMAP_USER || 'tony@homelander.com.au',
+  password: process.env.IMAP_PASSWORD || 'Tonytadros$6776',
+  host: process.env.IMAP_HOST || 'mail.homelander.com.au',
+  port: parseInt(process.env.IMAP_PORT || '993'),
   tls: true,
   tlsOptions: { rejectUnauthorized: false }
 };
 
 const SMTP_CONFIG = {
-  host: 'mail.homelander.com.au',
-  port: 587,
+  host: process.env.SMTP_HOST || 'mail.homelander.com.au',
+  port: parseInt(process.env.SMTP_PORT || '587'),
   secure: false,
   auth: {
-    user: 'susie@homelander.com.au',
-    pass: 'Homelander$2025'
+    user: process.env.SMTP_USER || 'susie@homelander.com.au',
+    pass: process.env.SMTP_PASSWORD || 'Homelander$2025'
   }
 };
 
-// Initialize clients
+// Initialize clients - EXISTING CLIENTS PRESERVED
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 const emailTransporter = nodemailer.createTransport(SMTP_CONFIG);
+
+// NEW: Twilio SMS Client (optional - only if credentials provided)
+const twilioClient = (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN)
+  ? twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
+  : null;
+const TWILIO_FROM = process.env.TWILIO_FROM_NUMBER || null;
+
+// NEW: Usage Analytics Storage
+const usageStats = {
+  toolCalls: {},
+  startTime: Date.now(),
+  totalCalls: 0
+};
 
 // MCP Server instance
 let mcpServer = null;
@@ -326,6 +363,36 @@ class BusinessTools {
       return { error: error.message, data: [] };
     }
   }
+
+  // NEW: SMS - Send SMS to tenants/contacts
+  async sendSMS(to, message) {
+    if (!twilioClient || !TWILIO_FROM) {
+      return {
+        success: false,
+        error: 'SMS not configured. Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_FROM_NUMBER environment variables.'
+      };
+    }
+
+    try {
+      const result = await twilioClient.messages.create({
+        body: message,
+        from: TWILIO_FROM,
+        to: to
+      });
+
+      return {
+        success: true,
+        messageSid: result.sid,
+        status: result.status,
+        to: result.to
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
 }
 
 const tools = new BusinessTools();
@@ -430,6 +497,19 @@ function createMCPServer() {
             },
             required: ['table']
           }
+        },
+        // NEW: SMS tool
+        {
+          name: 'send_sms',
+          description: 'Send SMS to tenants, participants, or clients. Requires Twilio configuration.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              to: { type: 'string', description: 'Phone number with country code (e.g., +61412345678)' },
+              message: { type: 'string', description: 'SMS message text (max 160 characters)' }
+            },
+            required: ['to', 'message']
+          }
         }
       ]
     };
@@ -441,6 +521,10 @@ function createMCPServer() {
 
     try {
       let result;
+
+      // NEW: Track usage analytics
+      usageStats.totalCalls++;
+      usageStats.toolCalls[name] = (usageStats.toolCalls[name] || 0) + 1;
 
       switch (name) {
         case 'read_emails':
@@ -473,6 +557,11 @@ function createMCPServer() {
 
         case 'query_database':
           result = await tools.queryDatabase(args.table, args.filters);
+          break;
+
+        // NEW: SMS tool
+        case 'send_sms':
+          result = await tools.sendSMS(args.to, args.message);
           break;
 
         default:
@@ -574,7 +663,24 @@ app.get('/health', (req, res) => {
     status: 'ok',
     service: 'Remote MCP Server - SmartCEO Business System',
     timestamp: new Date().toISOString(),
-    tools: 8
+    tools: 9 // Updated to include SMS
+  });
+});
+
+// NEW: Usage analytics endpoint
+app.get('/analytics', (req, res) => {
+  const uptimeHours = (Date.now() - usageStats.startTime) / (1000 * 60 * 60);
+
+  res.json({
+    uptime: {
+      hours: uptimeHours.toFixed(2),
+      started: new Date(usageStats.startTime).toISOString()
+    },
+    totalCalls: usageStats.totalCalls,
+    callsPerHour: (usageStats.totalCalls / uptimeHours).toFixed(2),
+    toolUsage: usageStats.toolCalls,
+    mostUsedTool: Object.entries(usageStats.toolCalls)
+      .sort(([,a], [,b]) => b - a)[0]?.[0] || 'none'
   });
 });
 
@@ -591,11 +697,16 @@ app.get('/', (req, res) => {
       name: 'SmartCEO Business System',
       version: '1.0.0'
     },
-    instructions: "Use this server to access complete business system: read emails, manage calendar, query properties database, send emails, trigger workflows, and get business snapshots.",
+    instructions: "Use this server to access complete business system: read emails, manage calendar, query properties database, send emails, send SMS, trigger workflows, and get business snapshots.",
     transport: "sse",
     sse_endpoint: "/mcp/sse"
   });
 });
+
+// NEW: Sentry error handler (must be before other error handlers)
+if (process.env.SENTRY_DSN) {
+  app.use(Sentry.Handlers.errorHandler());
+}
 
 // Start server
 const PORT_TO_USE = process.env.PORT || PORT;
