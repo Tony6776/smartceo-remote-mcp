@@ -531,12 +531,12 @@ app.get('/mcp/sse', async (req, res) => {
   }
 });
 
-// POST to /mcp/sse - return error to force clients to use SSE (GET)
+// POST to /mcp/sse - return 405 Method Not Allowed to force SSE fallback
 app.post('/mcp/sse', (req, res) => {
-  console.log('⚠️  POST to /mcp/sse - client should use GET for SSE');
-  res.status(400).json({
-    error: 'use_sse',
-    message: 'This server only supports SSE transport. Please use GET request for SSE connection.'
+  console.log('⚠️  POST to /mcp/sse - returning 405 to force SSE fallback');
+  res.status(405).set('Allow', 'GET').json({
+    error: 'method_not_allowed',
+    message: 'This endpoint only supports GET for SSE. Use GET instead of POST.'
   });
 });
 
