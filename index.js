@@ -503,7 +503,7 @@ function createMCPServer() {
   return server;
 }
 
-// SSE endpoint for Remote MCP
+// SSE endpoint for Remote MCP (GET for SSE, POST returns error to force SSE fallback)
 app.get('/mcp/sse', async (req, res) => {
   console.log('📡 New MCP SSE connection from Claude');
 
@@ -529,6 +529,15 @@ app.get('/mcp/sse', async (req, res) => {
       res.status(500).json({ error: 'MCP connection failed', message: error.message });
     }
   }
+});
+
+// POST to /mcp/sse - return error to force clients to use SSE (GET)
+app.post('/mcp/sse', (req, res) => {
+  console.log('⚠️  POST to /mcp/sse - client should use GET for SSE');
+  res.status(400).json({
+    error: 'use_sse',
+    message: 'This server only supports SSE transport. Please use GET request for SSE connection.'
+  });
 });
 
 // POST endpoint for Remote MCP messages
