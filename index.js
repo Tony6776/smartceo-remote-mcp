@@ -558,7 +558,8 @@ app.post('/mcp/messages', async (req, res) => {
 
   try {
     console.log('📨 Forwarding MCP message to transport:', req.body?.method);
-    await activeTransport.handlePostMessage(req, res);
+    // handlePostMessage expects (req, res, parsedBody)
+    await activeTransport.handlePostMessage(req, res, req.body);
   } catch (error) {
     console.error('❌ Error handling POST message:', error);
     if (!res.headersSent) {
