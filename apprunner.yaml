@@ -12,9 +12,9 @@ run:
     - name: PORT
       value: "3000"
     - name: SUPABASE_URL
-      value: "https://wwciglseudmbifvmfxva.supabase.co"
+      value: "https://bqvptfdxnrzculgjcnjo.supabase.co"
     - name: SUPABASE_KEY
-      value: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind3Y2lnbHNldWRtYmlmdm1meHZhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MjYwNTc5OSwiZXhwIjoyMDY4MTgxNzk5fQ.Letj_MEjd6Bx5jhFYGDUWf2MxMQ3sPTHAJQqwu3dhLE"
+      value: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJxdnB0ZmR4bnJ6Y3VsZ2pjbmpvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDIyNjk0MCwiZXhwIjoyMDY5ODAyOTQwfQ.3s8fFVrDyJmMwbpo9OXx03GyV9JT3M8sVEUAV8_qhh4"
     - name: IMAP_HOST
       value: "mail.homelander.com.au"
     - name: IMAP_PORT
