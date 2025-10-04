@@ -16,21 +16,21 @@ run:
     - name: SUPABASE_KEY
       value: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFzanJ2emV1cHFweGhmbXpkZHhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mjg1NDA0NzcsImV4cCI6MjA0NDExNjQ3N30.BUZqRvBi3i0MqHMm-6pFO9_bKiPLlLqXkM_EQ6_xVLs"
     - name: IMAP_HOST
-      value: "outlook.office365.com"
+      value: "mail.homelander.com.au"
     - name: IMAP_PORT
       value: "993"
     - name: IMAP_USER
       value: "tony@homelander.com.au"
     - name: IMAP_PASSWORD
-      value: "Skytrain11"
+      value: "Tonytadros$6776"
     - name: SMTP_HOST
-      value: "smtp.office365.com"
+      value: "mail.homelander.com.au"
     - name: SMTP_PORT
       value: "587"
     - name: SMTP_USER
       value: "susie@homelander.com.au"
     - name: SMTP_PASSWORD
-      value: "Skytrain11"
+      value: "Homelander$2025"
     - name: GOOGLE_CALENDAR_URL
       value: "https://calendar.google.com/calendar/ical/tony%40homelander.com.au/private-8adbc4b3e2abef73e2ad8ba21efb4f66/basic.ics"
     - name: N8N_API_KEY
