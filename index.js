@@ -2116,12 +2116,18 @@ app.get('/mcp/sse', async (req, res) => {
     const transport = new SSEServerTransport('/mcp/messages', res);
     activeTransport = transport; // Store for POST handler
 
-    // Keepalive ping to prevent timeout (every 15 seconds)
+    // Connect to MCP server (this calls transport.start() internally)
+    await mcpServer.connect(transport);
+    console.log('✅ MCP Server connected via SSE');
+
+    // NOW start keepalive pings AFTER transport has initialized
+    // Send SSE comment every 15 seconds to prevent proxy/firewall timeout
     const keepaliveInterval = setInterval(() => {
       if (!res.writableEnded) {
         try {
           res.write(': keepalive\n\n');
         } catch (e) {
+          console.error('Keepalive write failed:', e.message);
           clearInterval(keepaliveInterval);
         }
       } else {
@@ -2134,10 +2140,6 @@ app.get('/mcp/sse', async (req, res) => {
       clearInterval(keepaliveInterval);
       activeTransport = null; // Clear on disconnect
     });
-
-    // Connect to MCP server
-    await mcpServer.connect(transport);
-    console.log('✅ MCP Server connected via SSE');
 
   } catch (error) {
     console.error('❌ MCP connection error:', error);
