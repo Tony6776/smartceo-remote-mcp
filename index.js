@@ -2116,8 +2116,22 @@ app.get('/mcp/sse', async (req, res) => {
     const transport = new SSEServerTransport('/mcp/messages', res);
     activeTransport = transport; // Store for POST handler
 
+    // Keepalive ping to prevent timeout (every 15 seconds)
+    const keepaliveInterval = setInterval(() => {
+      if (!res.writableEnded) {
+        try {
+          res.write(': keepalive\n\n');
+        } catch (e) {
+          clearInterval(keepaliveInterval);
+        }
+      } else {
+        clearInterval(keepaliveInterval);
+      }
+    }, 15000);
+
     req.on('close', () => {
       console.log('🔌 SSE connection closed');
+      clearInterval(keepaliveInterval);
       activeTransport = null; // Clear on disconnect
     });
 
