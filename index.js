@@ -2100,8 +2100,8 @@ function createMCPServer() {
   return server;
 }
 
-// Store active SSE transport for handling POST messages
-let activeTransport = null;
+// Store active SSE transports for handling POST messages (support multiple connections)
+const activeTransports = new Map(); // sessionId -> transport
 
 // SSE endpoint for Remote MCP (GET for SSE, POST returns error to force SSE fallback)
 app.get('/mcp/sse', async (req, res) => {
@@ -2114,11 +2114,14 @@ app.get('/mcp/sse', async (req, res) => {
 
     // Create and start the SSE transport
     const transport = new SSEServerTransport('/mcp/messages', res);
-    activeTransport = transport; // Store for POST handler
 
     // Connect to MCP server (this calls transport.start() internally)
     await mcpServer.connect(transport);
-    console.log('✅ MCP Server connected via SSE');
+
+    // Store transport by sessionId for POST handler
+    const sessionId = transport.sessionId;
+    activeTransports.set(sessionId, transport);
+    console.log(`✅ MCP Server connected via SSE (sessionId: ${sessionId}, total connections: ${activeTransports.size})`);
 
     // NOW start keepalive pings AFTER transport has initialized
     // Send SSE comment every 15 seconds to prevent proxy/firewall timeout
@@ -2136,9 +2139,10 @@ app.get('/mcp/sse', async (req, res) => {
     }, 15000);
 
     req.on('close', () => {
-      console.log('🔌 SSE connection closed');
+      console.log(`🔌 SSE connection closed (sessionId: ${sessionId})`);
       clearInterval(keepaliveInterval);
-      activeTransport = null; // Clear on disconnect
+      activeTransports.delete(sessionId); // Remove this specific transport
+      console.log(`   Remaining connections: ${activeTransports.size}`);
     });
 
   } catch (error) {
@@ -2161,28 +2165,30 @@ app.post('/mcp/sse', (req, res) => {
 
 // POST endpoint for Remote MCP messages
 app.post('/mcp/messages', async (req, res) => {
-  if (!activeTransport) {
-    console.log('📨 MCP message received but no active SSE session:', req.body?.method);
-    return res.status(503).json({
-      error: 'no_session',
-      message: 'No active SSE session. Connect to /mcp/sse first.'
+  // Validate sessionId
+  const sessionId = req.query.sessionId;
+  if (!sessionId) {
+    console.log('📨 MCP message received without sessionId');
+    return res.status(400).json({
+      error: 'missing_session_id',
+      message: 'sessionId query parameter is required.'
     });
   }
 
-  // Validate sessionId matches
-  const sessionId = req.query.sessionId;
-  if (!sessionId || sessionId !== activeTransport.sessionId) {
-    console.log('❌ Session ID mismatch:', { received: sessionId, expected: activeTransport.sessionId });
-    return res.status(400).json({
-      error: 'invalid_session',
-      message: 'Session ID does not match active session.'
+  // Find transport for this session
+  const transport = activeTransports.get(sessionId);
+  if (!transport) {
+    console.log('📨 MCP message for unknown session:', sessionId, '(active sessions:', Array.from(activeTransports.keys()).join(', ') || 'none', ')');
+    return res.status(503).json({
+      error: 'no_session',
+      message: 'No active SSE session with this sessionId. Connect to /mcp/sse first.'
     });
   }
 
   try {
     console.log('📨 Forwarding MCP message to transport:', req.body?.method, 'sessionId:', sessionId);
     // handlePostMessage expects (req, res, parsedBody)
-    await activeTransport.handlePostMessage(req, res, req.body);
+    await transport.handlePostMessage(req, res, req.body);
   } catch (error) {
     console.error('❌ Error handling POST message:', error);
     if (!res.headersSent) {
