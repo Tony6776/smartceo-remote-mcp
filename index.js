@@ -2169,8 +2169,18 @@ app.post('/mcp/messages', async (req, res) => {
     });
   }
 
+  // Validate sessionId matches
+  const sessionId = req.query.sessionId;
+  if (!sessionId || sessionId !== activeTransport.sessionId) {
+    console.log('❌ Session ID mismatch:', { received: sessionId, expected: activeTransport.sessionId });
+    return res.status(400).json({
+      error: 'invalid_session',
+      message: 'Session ID does not match active session.'
+    });
+  }
+
   try {
-    console.log('📨 Forwarding MCP message to transport:', req.body?.method);
+    console.log('📨 Forwarding MCP message to transport:', req.body?.method, 'sessionId:', sessionId);
     // handlePostMessage expects (req, res, parsedBody)
     await activeTransport.handlePostMessage(req, res, req.body);
   } catch (error) {
