@@ -2207,6 +2207,26 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Diagnostic endpoint
+app.get('/diagnostic', (req, res) => {
+  res.json({
+    environment: {
+      IMAP_HOST: process.env.IMAP_HOST || 'not set',
+      IMAP_PORT: process.env.IMAP_PORT || 'not set',
+      IMAP_USER: process.env.IMAP_USER || 'not set',
+      SUPABASE_URL: process.env.SUPABASE_URL || 'not set',
+      N8N_WEBHOOK_URL: process.env.N8N_WEBHOOK_URL || 'not set'
+    },
+    config: {
+      IMAP_HOST: IMAP_CONFIG.host,
+      IMAP_PORT: IMAP_CONFIG.port,
+      IMAP_USER: IMAP_CONFIG.user,
+      SUPABASE_URL: SUPABASE_URL
+    },
+    activeConnections: activeTransports.size
+  });
+});
+
 // NEW: Usage analytics endpoint
 app.get('/analytics', (req, res) => {
   const uptimeHours = (Date.now() - usageStats.startTime) / (1000 * 60 * 60);
