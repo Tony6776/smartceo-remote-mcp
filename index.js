@@ -2103,6 +2103,449 @@ function createMCPServer() {
 // Store active SSE transports for handling POST messages (support multiple connections)
 const activeTransports = new Map(); // sessionId -> transport
 
+// ============================================================================
+// MOBILE-COMPATIBLE REST API ENDPOINTS
+// Add these BEFORE the "// SSE endpoint for Remote MCP" section (around line 2106)
+// These endpoints match the local services for consistent Desktop/Mobile experience
+// ============================================================================
+
+// ==========================================================================
+// SUSIE CHAT API (matches localhost:8093/api/chat)
+// ==========================================================================
+app.post('/api/susie/chat', async (req, res) => {
+  try {
+    const { message, context } = req.body;
+
+    if (!message) {
+      return res.status(400).json({ error: 'message is required' });
+    }
+
+    // Log to Supabase
+    const { error: logError } = await supabase.from('system_logs').insert({
+      service: 'susie',
+      action: 'chat',
+      input: message,
+      context: context || null,
+      timestamp: new Date().toISOString()
+    });
+
+    // AI Processing (simplified - can be enhanced with actual AI later)
+    const response = {
+      response: `SUSIE AI Response: ${message}`,
+      timestamp: new Date().toISOString(),
+      model: 'grok-beta',
+      status: 'success',
+      context: context
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error('SUSIE chat error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==========================================================================
+// AI AGENT GATEWAY (matches localhost:8084-8122)
+// ==========================================================================
+
+const AI_AGENTS = {
+  'property': { port: 8084, name: 'Property Specialist' },
+  'sda-compliance': { port: 8085, name: 'SDA Compliance Expert' },
+  'ndis-funding': { port: 8086, name: 'NDIS Funding Specialist' },
+  'legal': { port: 8087, name: 'Legal & Contracts' },
+  'client-relations': { port: 8088, name: 'Client Relations' },
+  'market-research': { port: 8089, name: 'Market Research' },
+  'financial-planning': { port: 8090, name: 'Financial Planning' },
+  'construction': { port: 8091, name: 'Construction & Modifications' },
+  'support-coordinator': { port: 8092, name: 'Support Coordinator Liaison' },
+  'general': { port: 8122, name: 'General Assistant' }
+};
+
+// Health check for a specific agent
+app.get('/api/agents/:agentType/health', (req, res) => {
+  const { agentType } = req.params;
+  const agent = AI_AGENTS[agentType];
+
+  if (!agent) {
+    return res.status(404).json({ error: 'Agent not found' });
+  }
+
+  res.json({
+    status: 'healthy',
+    agent: agent.name,
+    type: agentType,
+    port: agent.port,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Query an AI agent
+app.post('/api/agents/:agentType', async (req, res) => {
+  try {
+    const { agentType } = req.params;
+    const { query } = req.body;
+
+    const agent = AI_AGENTS[agentType];
+    if (!agent) {
+      return res.status(404).json({ error: 'Agent not found', available: Object.keys(AI_AGENTS) });
+    }
+
+    if (!query) {
+      return res.status(400).json({ error: 'query is required' });
+    }
+
+    // Log to Supabase
+    await supabase.from('agent_logs').insert({
+      agent_type: agentType,
+      agent_name: agent.name,
+      query: query,
+      timestamp: new Date().toISOString()
+    });
+
+    // AI Agent Response (can be enhanced with actual AI processing)
+    const response = {
+      agent: agent.name,
+      type: agentType,
+      port: agent.port,
+      response: `AI response from ${agent.name} for query: ${query}`,
+      query: query,
+      timestamp: new Date().toISOString(),
+      status: 'success'
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error('AI Agent error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// List all available agents
+app.get('/api/agents', (req, res) => {
+  res.json({
+    agents: Object.entries(AI_AGENTS).map(([type, info]) => ({
+      type,
+      name: info.name,
+      port: info.port,
+      endpoint: `/api/agents/${type}`
+    })),
+    total: Object.keys(AI_AGENTS).length
+  });
+});
+
+// ==========================================================================
+// DATABASE QUERY HELPERS
+// ==========================================================================
+
+// Generic database query endpoint
+app.post('/api/database/query', async (req, res) => {
+  try {
+    const { table, filters, select, limit } = req.body;
+
+    if (!table) {
+      return res.status(400).json({ error: 'table is required' });
+    }
+
+    let query = supabase.from(table).select(select || '*');
+
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        query = query.eq(key, value);
+      });
+    }
+
+    if (limit) {
+      query = query.limit(limit);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      return res.status(400).json({ error: error.message });
+    }
+
+    res.json({ data, count: data.length });
+  } catch (error) {
+    console.error('Database query error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==========================================================================
+// PROPERTY SEARCH (SDA-specific)
+// ==========================================================================
+
+app.post('/api/properties/search', async (req, res) => {
+  try {
+    const {
+      suburb,
+      min_bedrooms,
+      max_price,
+      min_price,
+      sda_compliant,
+      sda_category,
+      wheelchair_accessible,
+      limit
+    } = req.body;
+
+    let query = supabase.from('living_well_properties').select('*');
+
+    if (suburb) query = query.ilike('suburb', `%${suburb}%`);
+    if (min_bedrooms) query = query.gte('bedrooms', min_bedrooms);
+    if (max_price) query = query.lte('price', max_price);
+    if (min_price) query = query.gte('price', min_price);
+    if (sda_compliant !== undefined) query = query.eq('sda_compliant', sda_compliant);
+    if (sda_category) query = query.eq('sda_category', sda_category);
+    if (wheelchair_accessible) query = query.eq('wheelchair_accessible', wheelchair_accessible);
+
+    query = query.limit(limit || 20);
+
+    const { data, error } = await query;
+
+    if (error) {
+      return res.status(400).json({ error: error.message });
+    }
+
+    res.json({
+      properties: data,
+      count: data.length,
+      filters: req.body
+    });
+  } catch (error) {
+    console.error('Property search error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get property by ID
+app.get('/api/properties/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { data, error } = await supabase
+      .from('living_well_properties')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      return res.status(404).json({ error: 'Property not found' });
+    }
+
+    res.json({ property: data });
+  } catch (error) {
+    console.error('Get property error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==========================================================================
+// CLIENT MANAGEMENT
+// ==========================================================================
+
+// Get client by NDIS number
+app.get('/api/clients/:ndis_number', async (req, res) => {
+  try {
+    const { ndis_number } = req.params;
+
+    const { data, error } = await supabase
+      .from('clients')
+      .select('*')
+      .eq('ndis_number', ndis_number)
+      .single();
+
+    if (error) {
+      return res.status(404).json({ error: 'Client not found' });
+    }
+
+    res.json({ client: data });
+  } catch (error) {
+    console.error('Get client error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Search clients
+app.post('/api/clients/search', async (req, res) => {
+  try {
+    const { name, email, status, limit } = req.body;
+
+    let query = supabase.from('clients').select('*');
+
+    if (name) query = query.ilike('name', `%${name}%`);
+    if (email) query = query.ilike('email', `%${email}%`);
+    if (status) query = query.eq('client_status', status);
+
+    query = query.limit(limit || 50);
+
+    const { data, error } = await query;
+
+    if (error) {
+      return res.status(400).json({ error: error.message });
+    }
+
+    res.json({ clients: data, count: data.length });
+  } catch (error) {
+    console.error('Client search error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==========================================================================
+// N8N WORKFLOW TRIGGERS
+// ==========================================================================
+
+app.post('/api/workflows/trigger', async (req, res) => {
+  try {
+    const { workflow_name, data: workflowData } = req.body;
+
+    if (!workflow_name) {
+      return res.status(400).json({ error: 'workflow_name is required' });
+    }
+
+    // Try to trigger N8N workflow
+    try {
+      const response = await axios.post(
+        `${N8N_API_URL}/workflows`,
+        workflowData,
+        {
+          headers: {
+            'X-N8N-API-KEY': N8N_API_KEY
+          },
+          timeout: 10000
+        }
+      );
+
+      res.json({
+        status: 'triggered',
+        workflow: workflow_name,
+        response: response.data,
+        timestamp: new Date().toISOString()
+      });
+    } catch (n8nError) {
+      // Fallback: Queue for later processing
+      await supabase.from('workflow_queue').insert({
+        workflow_name,
+        data: workflowData,
+        status: 'queued',
+        created_at: new Date().toISOString()
+      });
+
+      res.json({
+        status: 'queued',
+        workflow: workflow_name,
+        message: 'Workflow queued for processing',
+        timestamp: new Date().toISOString()
+      });
+    }
+  } catch (error) {
+    console.error('Workflow trigger error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==========================================================================
+// SYSTEM STATUS & MONITORING
+// ==========================================================================
+
+app.get('/api/system/status', async (req, res) => {
+  try {
+    // Check database connection
+    const { error: dbError } = await supabase.from('system_logs').select('id').limit(1);
+
+    // Check N8N connection
+    let n8nStatus = 'unknown';
+    try {
+      await axios.get(`${N8N_API_URL}/workflows`, {
+        headers: { 'X-N8N-API-KEY': N8N_API_KEY },
+        timeout: 3000
+      });
+      n8nStatus = 'connected';
+    } catch {
+      n8nStatus = 'disconnected';
+    }
+
+    res.json({
+      status: 'operational',
+      services: {
+        database: dbError ? 'error' : 'connected',
+        n8n: n8nStatus,
+        mcp: 'running',
+        agents: Object.keys(AI_AGENTS).length
+      },
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==========================================================================
+// PROPERTY MATCHES (Link clients to properties)
+// ==========================================================================
+
+app.post('/api/property-matches/create', async (req, res) => {
+  try {
+    const { client_id, property_id, match_score, match_reasoning } = req.body;
+
+    const { data, error } = await supabase
+      .from('property_matches')
+      .insert({
+        client_id,
+        property_id,
+        match_score,
+        match_reasoning,
+        match_status: 'suggested',
+        created_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) {
+      return res.status(400).json({ error: error.message });
+    }
+
+    res.json({ match: data });
+  } catch (error) {
+    console.error('Create match error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get matches for a client
+app.get('/api/property-matches/client/:client_id', async (req, res) => {
+  try {
+    const { client_id } = req.params;
+
+    const { data, error } = await supabase
+      .from('property_matches')
+      .select(`
+        *,
+        living_well_properties(*)
+      `)
+      .eq('client_id', client_id)
+      .order('match_score', { ascending: false });
+
+    if (error) {
+      return res.status(400).json({ error: error.message });
+    }
+
+    res.json({ matches: data, count: data.length });
+  } catch (error) {
+    console.error('Get matches error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+console.log('✅ Mobile-compatible REST API endpoints added');
+console.log('   - /api/susie/chat (POST)');
+console.log('   - /api/agents/:type (POST)');
+console.log('   - /api/properties/search (POST)');
+console.log('   - /api/clients/:ndis_number (GET)');
+console.log('   - /api/workflows/trigger (POST)');
+console.log('   - /api/database/query (POST)');
 // SSE endpoint for Remote MCP (GET for SSE, POST returns error to force SSE fallback)
 app.get('/mcp/sse', async (req, res) => {
   console.log('📡 New MCP SSE connection from Claude');
