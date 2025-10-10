@@ -2539,6 +2539,111 @@ app.get('/api/property-matches/client/:client_id', async (req, res) => {
   }
 });
 
+// ============================================================================
+// N8N PROXY API - For Claude Mobile Access (bypasses IP restrictions)
+// ============================================================================
+
+// GET /api/n8n/workflows - List all workflows
+app.get('/api/n8n/workflows', async (req, res) => {
+  try {
+    const response = await fetch(`${N8N_API_URL}/workflows`, {
+      headers: { 'X-N8N-API-KEY': N8N_API_KEY }
+    });
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: 'N8N proxy error', details: error.message });
+  }
+});
+
+// GET /api/n8n/workflows/:id - Get workflow details
+app.get('/api/n8n/workflows/:id', async (req, res) => {
+  try {
+    const response = await fetch(`${N8N_API_URL}/workflows/${req.params.id}`, {
+      headers: { 'X-N8N-API-KEY': N8N_API_KEY }
+    });
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: 'N8N proxy error', details: error.message });
+  }
+});
+
+// PATCH /api/n8n/workflows/:id/activate - Activate workflow
+app.patch('/api/n8n/workflows/:id/activate', async (req, res) => {
+  try {
+    const response = await fetch(`${N8N_API_URL}/workflows/${req.params.id}/activate`, {
+      method: 'PATCH',
+      headers: { 'X-N8N-API-KEY': N8N_API_KEY }
+    });
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: 'N8N proxy error', details: error.message });
+  }
+});
+
+// PATCH /api/n8n/workflows/:id/deactivate - Deactivate workflow
+app.patch('/api/n8n/workflows/:id/deactivate', async (req, res) => {
+  try {
+    const response = await fetch(`${N8N_API_URL}/workflows/${req.params.id}/deactivate`, {
+      method: 'PATCH',
+      headers: { 'X-N8N-API-KEY': N8N_API_KEY }
+    });
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: 'N8N proxy error', details: error.message });
+  }
+});
+
+// GET /api/n8n/executions - List executions
+app.get('/api/n8n/executions', async (req, res) => {
+  try {
+    const response = await fetch(`${N8N_API_URL}/executions`, {
+      headers: { 'X-N8N-API-KEY': N8N_API_KEY }
+    });
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: 'N8N proxy error', details: error.message });
+  }
+});
+
+// POST /api/n8n/workflows/:id/execute - Execute workflow manually
+app.post('/api/n8n/workflows/:id/execute', async (req, res) => {
+  try {
+    const response = await fetch(`${N8N_API_URL}/workflows/${req.params.id}/execute`, {
+      method: 'POST',
+      headers: {
+        'X-N8N-API-KEY': N8N_API_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(req.body)
+    });
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: 'N8N proxy error', details: error.message });
+  }
+});
+
+// POST /api/n8n/webhook/:path - Trigger webhook by path
+app.post('/api/n8n/webhook/:path', async (req, res) => {
+  try {
+    const webhookUrl = `https://homelandersda.app.n8n.cloud/webhook/${req.params.path}`;
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req.body)
+    });
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: 'Webhook proxy error', details: error.message });
+  }
+});
+
 console.log('✅ Mobile-compatible REST API endpoints added');
 console.log('   - /api/susie/chat (POST)');
 console.log('   - /api/agents/:type (POST)');
@@ -2546,6 +2651,14 @@ console.log('   - /api/properties/search (POST)');
 console.log('   - /api/clients/:ndis_number (GET)');
 console.log('   - /api/workflows/trigger (POST)');
 console.log('   - /api/database/query (POST)');
+console.log('✅ N8N Proxy API endpoints added (for Claude Mobile)');
+console.log('   - /api/n8n/workflows (GET)');
+console.log('   - /api/n8n/workflows/:id (GET)');
+console.log('   - /api/n8n/workflows/:id/activate (PATCH)');
+console.log('   - /api/n8n/workflows/:id/deactivate (PATCH)');
+console.log('   - /api/n8n/executions (GET)');
+console.log('   - /api/n8n/workflows/:id/execute (POST)');
+console.log('   - /api/n8n/webhook/:path (POST)');
 // SSE endpoint for Remote MCP (GET for SSE, POST returns error to force SSE fallback)
 app.get('/mcp/sse', async (req, res) => {
   console.log('📡 New MCP SSE connection from Claude');
