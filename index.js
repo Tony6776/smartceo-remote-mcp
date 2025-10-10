@@ -68,7 +68,7 @@ const SUPABASE_URL = process.env.SUPABASE_URL || 'https://wwciglseudmbifvmfxva.s
 const SUPABASE_KEY = process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind3Y2lnbHNldWRtYmlmdm1meHZhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MjYwNTc5OSwiZXhwIjoyMDY4MTgxNzk5fQ.Letj_MEjd6Bx5jhFYGDUWf2MxMQ3sPTHAJQqwu3dhLE';
 const CALENDAR_URL = process.env.CALENDAR_URL || 'https://calendar.google.com/calendar/ical/tadros.tony1976%40gmail.com/private-f99f8f6f09b218acdd3ebc135c7e5211/basic.ics';
 const N8N_API_URL = process.env.N8N_API_URL || 'https://homelandersda.app.n8n.cloud/api/v1';
-const N8N_API_KEY = process.env.N8N_API_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjYzVlODc2Yy0yMTFiLTQ5MDUtYjVkZi0xYzcxMzIyNmVkYTgiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU4NDM1NjI2fQ.AlDcvX4qXDh3C4CtfLjKgorfFPoRJZKF_KcpGGOQ-1s';
+const N8N_API_KEY = process.env.N8N_API_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjYzVlODc2Yy0yMTFiLTQ5MDUtYjVkZi0xYzcxMzIyNmVkYTgiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzYwMDg5NTE3fQ.NvpRz-OxVhmHUmqJVyqHlKLJL1LLYzjn2YUuAWFxRrU';
 
 // Email configuration - EXISTING VALUES PRESERVED, environment variables optional
 const IMAP_CONFIG = {
