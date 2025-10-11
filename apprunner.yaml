@@ -36,4 +36,4 @@ run:
     - name: N8N_API_URL
       value: "https://homelandersda.app.n8n.cloud/api/v1"
     - name: N8N_API_KEY
-      value: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjYzVlODc2Yy0yMTFiLTQ5MDUtYjVkZi0xYzcxMzIyNmVkYTgiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzU4NDM1NjI2fQ.AlDcvX4qXDh3C4CtfLjKgorfFPoRJZKF_KcpGGOQ-1s"
+      value: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjYzVlODc2Yy0yMTFiLTQ5MDUtYjVkZi0xYzcxMzIyNmVkYTgiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzYwMDg5NTE3fQ.NvpRz-OxVhmHUmqJVyqHlKLJL1LLYzjn2YUuAWFxRrU"
