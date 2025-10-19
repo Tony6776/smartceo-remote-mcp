@@ -32,8 +32,13 @@ import * as Sentry from '@sentry/node';
 import twilio from 'twilio';
 import sdaAdminTools from './sda-property-admin-extension.js';
 
+console.log('✅ SDA Property Admin extension loaded successfully');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Enable trust proxy for App Runner (behind AWS load balancer)
+app.set('trust proxy', true);
 
 // NEW: Sentry Error Monitoring (optional - only if SENTRY_DSN is set)
 if (process.env.SENTRY_DSN) {
