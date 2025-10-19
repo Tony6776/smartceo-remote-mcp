@@ -30,6 +30,7 @@ import axios from 'axios';
 import rateLimit from 'express-rate-limit';
 import * as Sentry from '@sentry/node';
 import twilio from 'twilio';
+import sdaAdminTools from './sda-property-admin-extension.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -1937,6 +1938,94 @@ function createMCPServer() {
             },
             required: ['agent_type', 'operation', 'parameters']
           }
+        },
+        // ============================================================================
+        // SDA PROPERTY ADMIN TOOLS (New Supabase Instance)
+        // ============================================================================
+        {
+          name: 'sda_get_participants',
+          description: 'Get all NDIS participants from SDA Admin system (454+ records). Filter by status, limit results.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              status: { type: 'string', description: 'Filter by status (active, pending, etc.)' },
+              limit: { type: 'number', description: 'Limit number of results' }
+            }
+          }
+        },
+        {
+          name: 'sda_get_landlords',
+          description: 'Get all landlords from SDA Admin system. Filter by NDIS registration status.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              ndis_registered: { type: 'boolean', description: 'Filter by NDIS registration' }
+            }
+          }
+        },
+        {
+          name: 'sda_get_investors',
+          description: 'Get all PLCG investors with investment preferences and capital availability.',
+          inputSchema: { type: 'object', properties: {} }
+        },
+        {
+          name: 'sda_get_properties',
+          description: 'Get SDA properties from Admin system. Filter by status and visibility.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              status: { type: 'string', description: 'Filter by status (available, rented, etc.)' },
+              visible_on_participant_site: { type: 'boolean', description: 'Show only visible properties' },
+              limit: { type: 'number', description: 'Limit results' }
+            }
+          }
+        },
+        {
+          name: 'sda_get_tenancies',
+          description: 'Get property tenancies with participant and landlord details. Includes rental amounts and SDA funding.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              status: { type: 'string', description: 'Filter by status (active, pending, ending, etc.)' }
+            }
+          }
+        },
+        {
+          name: 'sda_get_ndia_batches',
+          description: 'Get NDIA payment batches. View draft, submitted, or paid batches with totals.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              status: { type: 'string', description: 'Filter by status (draft, submitted, paid, etc.)' }
+            }
+          }
+        },
+        {
+          name: 'sda_generate_ndia_batch',
+          description: 'Generate monthly NDIA payment batch for all active tenancies. Creates batch + CSV file.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              organization_id: { type: 'string', description: 'Organization ID (default: homelander)', default: 'homelander' }
+            }
+          }
+        },
+        {
+          name: 'sda_get_maintenance',
+          description: 'Get maintenance requests for properties. Filter by status, priority, or property.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              status: { type: 'string', description: 'Filter by status (submitted, in_progress, completed)' },
+              priority: { type: 'string', description: 'Filter by priority (low, medium, high, urgent, emergency)' },
+              property_id: { type: 'string', description: 'Filter by property UUID' }
+            }
+          }
+        },
+        {
+          name: 'sda_health_check',
+          description: 'Check health of SDA Admin system (database, participants, properties, tenancies, NDIA).',
+          inputSchema: { type: 'object', properties: {} }
         }
       ]
     };
@@ -2070,6 +2159,45 @@ function createMCPServer() {
         // ============================================================================
         case 'ai_agent_gateway':
           result = await tools.aiAgentGateway(args.agent_type, args.operation, args.parameters);
+          break;
+
+        // ============================================================================
+        // SDA PROPERTY ADMIN TOOLS
+        // ============================================================================
+        case 'sda_get_participants':
+          result = await sdaAdminTools.getParticipants(args);
+          break;
+
+        case 'sda_get_landlords':
+          result = await sdaAdminTools.getLandlords(args);
+          break;
+
+        case 'sda_get_investors':
+          result = await sdaAdminTools.getInvestors();
+          break;
+
+        case 'sda_get_properties':
+          result = await sdaAdminTools.getProperties(args);
+          break;
+
+        case 'sda_get_tenancies':
+          result = await sdaAdminTools.getTenancies(args);
+          break;
+
+        case 'sda_get_ndia_batches':
+          result = await sdaAdminTools.getNDIABatches(args);
+          break;
+
+        case 'sda_generate_ndia_batch':
+          result = await sdaAdminTools.generateNDIABatch(args.organization_id);
+          break;
+
+        case 'sda_get_maintenance':
+          result = await sdaAdminTools.getMaintenanceRequests(args);
+          break;
+
+        case 'sda_health_check':
+          result = await sdaAdminTools.healthCheck();
           break;
 
         default:
@@ -2759,7 +2887,7 @@ app.get('/health', (req, res) => {
     status: 'ok',
     service: 'Remote MCP Server - SmartCEO Business System',
     timestamp: new Date().toISOString(),
-    tools: 27 // 9 existing + 8 business agents + 9 domain experts + 1 AI gateway
+    tools: 37 // 9 core + 8 business agents + 9 domain experts + 1 AI gateway + 9 SDA Admin + 1 SDA potential
   });
 });
 
@@ -2833,7 +2961,7 @@ app.listen(PORT_TO_USE, () => {
   console.log(`📧 Email: tony@homelander.com.au`);
   console.log(`📊 Database: Supabase connected`);
   console.log(`📅 Calendar: Google Calendar integrated`);
-  console.log(`🔧 Tools: 8 business tools available`);
+  console.log(`🔧 Tools: 37 tools available (9 core + 19 agents + 9 SDA Admin)`);
   console.log('');
   console.log('✅ Ready for Claude Mobile/Web/Desktop connections');
 });
