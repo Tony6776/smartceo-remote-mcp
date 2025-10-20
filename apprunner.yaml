@@ -8,9 +8,6 @@ run:
   command: node index.js
   network:
     port: 3000
-  instance-configuration:
-    cpu: 1024
-    memory: 2048
   env:
     - name: NODE_ENV
       value: "production"
