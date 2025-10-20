@@ -8,13 +8,12 @@ run:
   command: node index.js
   network:
     port: 3000
-  runtime-environment-variables:
-    - name: NODE_ENV
-      value: "production"
   instance-configuration:
     cpu: 1024
     memory: 2048
   env:
+    - name: NODE_ENV
+      value: "production"
     - name: PORT
       value: "3000"
     - name: SUPABASE_URL
