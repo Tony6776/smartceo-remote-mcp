@@ -353,6 +353,100 @@ export class SDAPropertyAdminTools {
   }
 
   /**
+   * Get summary statistics for all entities
+   */
+  async getStats() {
+    try {
+      const [
+        { count: participants },
+        { count: landlords },
+        { count: investors },
+        { count: properties },
+        { count: jobs }
+      ] = await Promise.all([
+        sdaAdminClient.from('participants').select('*', { count: 'exact', head: true }),
+        sdaAdminClient.from('landlords').select('*', { count: 'exact', head: true }),
+        sdaAdminClient.from('investors').select('*', { count: 'exact', head: true }),
+        sdaAdminClient.from('properties').select('*', { count: 'exact', head: true }),
+        sdaAdminClient.from('jobs').select('*', { count: 'exact', head: true })
+      ]);
+
+      return {
+        success: true,
+        data: {
+          participants: participants || 0,
+          landlords: landlords || 0,
+          investors: investors || 0,
+          properties: properties || 0,
+          jobs: jobs || 0
+        },
+        timestamp: new Date().toISOString(),
+        source: 'sda-admin-db'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Search across all entities by query string
+   */
+  async search(query) {
+    try {
+      if (!query || query.trim().length === 0) {
+        return {
+          success: false,
+          error: 'Search query is required'
+        };
+      }
+
+      const searchTerm = `%${query}%`;
+
+      const [
+        { data: participants },
+        { data: landlords },
+        { data: properties }
+      ] = await Promise.all([
+        sdaAdminClient
+          .from('participants')
+          .select('*')
+          .or(`name.ilike.${searchTerm},email.ilike.${searchTerm},ndis_number.ilike.${searchTerm}`),
+        sdaAdminClient
+          .from('landlords')
+          .select('*')
+          .or(`full_name.ilike.${searchTerm},email.ilike.${searchTerm},business_name.ilike.${searchTerm}`),
+        sdaAdminClient
+          .from('properties')
+          .select('*')
+          .or(`name.ilike.${searchTerm},address.ilike.${searchTerm},description.ilike.${searchTerm}`)
+      ]);
+
+      const totalResults = (participants?.length || 0) + (landlords?.length || 0) + (properties?.length || 0);
+
+      return {
+        success: true,
+        data: {
+          participants: participants || [],
+          landlords: landlords || [],
+          properties: properties || []
+        },
+        count: totalResults,
+        query: query,
+        timestamp: new Date().toISOString(),
+        source: 'sda-admin-db'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
    * Health check for SDA Admin system
    */
   async healthCheck() {

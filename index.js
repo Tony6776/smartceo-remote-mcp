@@ -2054,6 +2054,22 @@ function createMCPServer() {
           }
         },
         {
+          name: 'sda_get_stats',
+          description: 'Get summary statistics of all entities in SDA Admin (counts for participants, landlords, investors, properties, jobs).',
+          inputSchema: { type: 'object', properties: {} }
+        },
+        {
+          name: 'sda_search',
+          description: 'Search across all SDA Admin entities (participants, landlords, properties) by name, email, address, or NDIS number.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              query: { type: 'string', description: 'Search term to find across entities' }
+            },
+            required: ['query']
+          }
+        },
+        {
           name: 'sda_health_check',
           description: 'Check health of SDA Admin system (database, participants, properties, tenancies, NDIA).',
           inputSchema: { type: 'object', properties: {} }
@@ -2225,6 +2241,14 @@ function createMCPServer() {
 
         case 'sda_get_maintenance':
           result = await sdaAdminTools.getMaintenanceRequests(args);
+          break;
+
+        case 'sda_get_stats':
+          result = await sdaAdminTools.getStats();
+          break;
+
+        case 'sda_search':
+          result = await sdaAdminTools.search(args.query);
           break;
 
         case 'sda_health_check':
